@@ -48,4 +48,4 @@ Open the actual app and allow the Python runtime to finish loading before the pr
 - Cloudflare Workers deployment: https://freshroute.dakshx.workers.dev/
 - No demo video has been recorded or published. Do not submit a fabricated video URL.
 
-Hosted optimization and photo-to-validated-optimization have passed browser checks. Google intermittently returned internal errors on a later what-if request; a separate hosted retry succeeded, while the uninterrupted hosted sequence has not yet passed. The complete local sequence passed. See `docs/AI_EVALUATION.md` for exact scope and reproduce the live checks before judging.
+Hosted optimization and photo-to-validated-optimization passed browser checks. A separate hosted browser run completed confirmed natural-language what-if optimization and a cited Gemma explanation. The first combined hosted run encountered a Google internal error, so it is recorded as a failure; the complete local sequence passed. See `docs/AI_EVALUATION.md` for exact scope and reproduce the live checks before judging.
