@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 let worker,ready=false,busy=false,scenario=null,result=null,disrupted=null,version='',requestId=0;
 const waiting=new Map();
-const labels={'ai-import':'AI inventory import','ai-ask':'Ask FreshRoute','ai-whatif':'AI what-if',overview:'Overview',plan:'Dispatch plan',inventory:'Inventory & inputs',evidence:'Decision evidence',disruptions:'Disruption sandbox',reports:'Reports'};
+const labels={about:'About & how to use','ai-import':'AI inventory import','ai-ask':'Ask FreshRoute','ai-whatif':'AI what-if',overview:'Overview',plan:'Dispatch plan',inventory:'Inventory & inputs',evidence:'Decision evidence',disruptions:'Disruption sandbox',reports:'Reports'};
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=(value,digits=1)=>Number.isFinite(Number(value))?Number(value).toLocaleString(undefined,{maximumFractionDigits:digits}):'—';
 const money=value=>number(value,2);
@@ -138,3 +138,6 @@ launchEngine();demo().catch(err=>error(err.message));
 
 // Narrow integration surface for the separate intelligence UI.
 window.FreshRoute={getScenario:()=>scenario,getResult:()=>result,isReady:()=>ready,call,useScenario:validateScenario,showTab,table,escape,number,runCurrent:async()=>{setBusy(true);try{result=await call('run',JSON.stringify(scenario),currentLimit());renderResult();showTab('overview');return result;}finally{setBusy(false);}}};
+
+// The help page can be opened directly without running the optimizer.
+if(location.hash==='#about')showTab('about');
