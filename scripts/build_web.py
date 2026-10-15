@@ -1,5 +1,6 @@
 """Build a self-contained Pages artifact: pinned Pyodide plus hashed local wheels."""
 import csv
+import sys
 import hashlib
 import importlib.util
 import json
@@ -15,28 +16,32 @@ CACHE=ROOT/'.web-cache'
 RUNTIME=ROOT/'node_modules/pyodide'
 VERSION=json.loads((RUNTIME/'package.json').read_text())['version']
 LOCK=json.loads((RUNTIME/'pyodide-lock.json').read_text())
+CDN='--cdn-runtime' in sys.argv
 DIST.mkdir(exist_ok=True); CACHE.mkdir(exist_ok=True)
 shutil.copytree(ROOT/'web',DIST,dirs_exist_ok=True)
-(DIST/'runtime').mkdir(exist_ok=True)
-for name in ['pyodide.mjs','pyodide.js','pyodide.asm.mjs','pyodide.asm.wasm','python_stdlib.zip','pyodide-lock.json']:
-    shutil.copy2(RUNTIME/name,DIST/'runtime'/name)
-for name in ['numpy','scipy']:
-    package=LOCK['packages'][name]
-    path=CACHE/package['file_name']
-    if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest()!=package['sha256']:
-        url=f'https://cdn.jsdelivr.net/pyodide/v{VERSION}/full/{path.name}'
-        for attempt in range(3):
-            try:
-                print(f'Downloading {name} (attempt {attempt+1})',flush=True)
-                with urllib.request.urlopen(url,timeout=60) as response: content=response.read()
-                if hashlib.sha256(content).hexdigest()!=package['sha256']: raise ValueError('wheel checksum mismatch')
-                path.write_bytes(content); break
-            except Exception:
-                if attempt==2: raise
-                time.sleep(1)
-    print(f'{name}: {path.stat().st_size/1e6:.1f} MB, SHA256 verified',flush=True)
-    if path.stat().st_size>25*1024*1024: raise ValueError('Package exceeds Pages per-asset limit')
-    shutil.copy2(path,DIST/'runtime'/path.name)
+if (DIST/'runtime').exists(): shutil.rmtree(DIST/'runtime')
+(DIST/'runtime-config.json').write_text(json.dumps({'index_url': f'https://cdn.jsdelivr.net/pyodide/v{VERSION}/full/' if CDN else './runtime/'}))
+if not CDN:
+    (DIST/'runtime').mkdir(exist_ok=True)
+    for name in ['pyodide.mjs','pyodide.js','pyodide.asm.mjs','pyodide.asm.wasm','python_stdlib.zip','pyodide-lock.json']:
+        shutil.copy2(RUNTIME/name,DIST/'runtime'/name)
+    for name in ['numpy','scipy']:
+        package=LOCK['packages'][name]
+        path=CACHE/package['file_name']
+        if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest()!=package['sha256']:
+            url=f'https://cdn.jsdelivr.net/pyodide/v{VERSION}/full/{path.name}'
+            for attempt in range(3):
+                try:
+                    print(f'Downloading {name} (attempt {attempt+1})',flush=True)
+                    with urllib.request.urlopen(url,timeout=60) as response: content=response.read()
+                    if hashlib.sha256(content).hexdigest()!=package['sha256']: raise ValueError('wheel checksum mismatch')
+                    path.write_bytes(content); break
+                except Exception:
+                    if attempt==2: raise
+                    time.sleep(1)
+        print(f'{name}: {path.stat().st_size/1e6:.1f} MB, SHA256 verified',flush=True)
+        if path.stat().st_size>25*1024*1024: raise ValueError('Package exceeds Pages per-asset limit')
+        shutil.copy2(path,DIST/'runtime'/path.name)
 modules=['__init__','model','adapters','engine','evaluation','insights','scenario','webbridge']
 (DIST/'python/freshroute').mkdir(parents=True,exist_ok=True)
 for module in modules: shutil.copy2(ROOT/'freshroute'/f'{module}.py',DIST/'python/freshroute'/f'{module}.py')

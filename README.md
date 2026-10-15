@@ -1,5 +1,7 @@
 # FreshRoute
 
+[Open the live Cloudflare app](https://freshroute.pages.dev/)
+
 Local, explainable allocation of perishable produce. Core solving does not require a network or dashboard. No organizer data or official score was supplied: the example and benchmark are **synthetic validation scenarios**, not predictive or real-world performance evidence.
 
 ## Run
@@ -83,7 +85,7 @@ No official score adapter exists because none was supplied. The economic objecti
 
 ## Free Cloudflare deployment
 
-The hosted interface runs the **same Python model and HiGHS solver in a browser worker**, using pinned Pyodide 314.0.7. This avoids the paid Cloudflare Containers requirement. Python, NumPy and SciPy assets are served from the same Pages site. Input data never leaves the browser. JSON, CSV table bundles and XLSX imports are supported, alongside baseline comparison, explanations, markdown scenarios, disruptions and real report downloads. The local Streamlit app remains available.
+The hosted interface runs the **same Python model and HiGHS solver in a browser worker**, using pinned Pyodide 314.0.7. This avoids the paid Cloudflare Containers requirement. The hosted build loads the pinned Pyodide runtime, NumPy and SciPy from the Pyodide CDN; wheel integrity is checked by the loader. The optimizer source and interface are served from Cloudflare Pages. The default local build bundles runtime assets too. Input data never leaves the browser. JSON, CSV table bundles and XLSX imports are supported, alongside baseline comparison, explanations, markdown scenarios, disruptions and real report downloads. The local Streamlit app remains available.
 
 The initial download is about 30 MB. Modern browsers with WebAssembly support are required; memory and solving speed depend on the client device. Closing or reloading the page discards the planning session. There is no persistent operational execution state. Computation after initialization does not call an external service.
 
@@ -97,7 +99,7 @@ python -m http.server 8788 --directory dist
 node scripts/test_wasm.mjs
 ```
 
-The build downloads the exact NumPy/SciPy wheels from the Pyodide CDN, verifies their SHA-256 values from the pinned runtime lockfile, and caches them in `.web-cache`. Build dependencies require a network; core solving does not. Runtime assets are generated into `dist/`, not committed. Spreadsheet support bundles the installed pure Python openpyxl/et_xmlfile modules.
+The build downloads the exact NumPy/SciPy wheels from the Pyodide CDN, verifies their SHA-256 values from the pinned runtime lockfile, and caches them in `.web-cache`. Build dependencies require a network; core solving does not. Runtime assets are generated into `dist/`, not committed. `python scripts/build_web.py --cdn-runtime` builds the smaller hosted variant; `npm run deploy` selects this mode. CDN access is required for initial hosted engine startup, but user inputs are never sent there. Spreadsheet support bundles the installed pure Python openpyxl/et_xmlfile modules.
 
 With Cloudflare Wrangler installed and authenticated:
 
