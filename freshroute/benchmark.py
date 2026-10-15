@@ -67,7 +67,7 @@ def run_benchmark(output: str | Path, inputs: list[str] | None = None, time_limi
     for name,s in cases:
         b,p = baseline(s), optimize(s,time_limit)
         mb,mp = evaluate(s,b),evaluate(s,p)
-        rows.append({'scenario':name,'status':p.status,'mip_gap':p.mip_gap,'baseline_net':mb['net_revenue'],
+        rows.append({'scenario':name,'currency':s.config.currency,'quantity_unit':s.config.quantity_unit,'status':p.status,'mip_gap':p.mip_gap,'baseline_net':mb['net_revenue'],
                      'optimized_net':mp['net_revenue'],'net_change':mp['net_revenue']-mb['net_revenue'],
                      'net_change_percent':100*(mp['net_revenue']-mb['net_revenue'])/abs(mb['net_revenue']) if mb['net_revenue'] else None,
                      'baseline_spoiled':mb['spoiled_quantity'],'optimized_spoiled':mp['spoiled_quantity'],
@@ -79,9 +79,14 @@ def run_benchmark(output: str | Path, inputs: list[str] | None = None, time_limi
                      'baseline_violation_count':len(mb['constraint_violations']),
                      'optimized_violation_count':len(mp['constraint_violations']),
                      'diagnostics':mp['constraint_violations']+mb['constraint_violations']})
-    summary = {'evidence':evidence,'scenario_count':len(rows),
-               'total_net_change':sum(r['net_change'] for r in rows),
-               'mean_net_change':statistics.mean(r['net_change'] for r in rows) if rows else 0,
+    currencies=sorted({row['currency'] for row in rows})
+    by_currency={currency:{'scenario_count':sum(row['currency']==currency for row in rows),
+                           'total_net_change':sum(row['net_change'] for row in rows if row['currency']==currency),
+                           'mean_net_change':statistics.mean(row['net_change'] for row in rows if row['currency']==currency)}
+                 for currency in currencies}
+    summary = {'evidence':evidence,'scenario_count':len(rows),'by_currency':by_currency,
+               'total_net_change':sum(r['net_change'] for r in rows) if len(currencies)<=1 else None,
+               'mean_net_change':(statistics.mean(r['net_change'] for r in rows) if rows else 0) if len(currencies)<=1 else None,
                'revenue_regressions':sum(r['net_change'] < -1e-5 for r in rows),
                'constraint_violations':sum(r['baseline_violation_count']+r['optimized_violation_count'] for r in rows),
                'optimal_count':sum(r['status']=='optimal' for r in rows),
