@@ -48,4 +48,4 @@ Open the actual app and allow the Python runtime to finish loading before the pr
 - Cloudflare Workers deployment: https://freshroute.dakshx.workers.dev/
 - No demo video has been recorded or published. Do not submit a fabricated video URL.
 
-The live deployment must be checked before submission; the repository contains the commands for reproducing both the native benchmark and the real API browser test.
+Hosted optimization and photo-to-validated-optimization have passed browser checks. Google intermittently returned internal errors on a later what-if request; a separate hosted retry succeeded, while the uninterrupted hosted sequence has not yet passed. The complete local sequence passed. See `docs/AI_EVALUATION.md` for exact scope and reproduce the live checks before judging.

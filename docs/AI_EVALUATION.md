@@ -38,3 +38,7 @@ Raw responses and browser measurements are saved locally under `reports/ai/` (ig
 ## Hosted provider access
 
 The initial global Worker deployment received Google's “User location is not supported” error. US-region placement then encountered Google internal errors. Targeting the Mumbai region (`aws:ap-south-1`) produced a successful real hosted Gemma 4 what-if request (2.305 s observed API latency). This is an operational deployment check, separate from the local extraction measurements above.
+
+The hosted core browser suite passed optimization, disruption replanning, CSV/report downloads, XLSX import, mobile layout and zero page errors. The hosted AI browser run also passed real photo extraction, human-confirmation enforcement, audited correction and optimization of 255 kg with zero violations. Its subsequent what-if request encountered a Google 500 internal error; the valid plan stayed usable. A separate real hosted retry of that same route-delay request succeeded (2.384 s). The uninterrupted hosted AI sequence is therefore not counted as a pass in this record. The complete local sequence above did pass.
+
+The final automated suite contains 36 Python tests and 16 Node contract/UI safety tests. GitHub Actions also installs dependencies from scratch, runs the synthetic benchmark and executes the real WebAssembly solver; this passed for the enhancement PR.
