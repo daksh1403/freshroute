@@ -1,13 +1,15 @@
 /* Python runs in a worker so the interface remains usable during optimization. */
-import {loadPyodide} from './runtime/pyodide.mjs';
 let python;
 let queue=Promise.resolve();
 const progress=text=>self.postMessage({type:'progress',text});
 async function initialize(){
   progress('Loading the local Python runtime…');
-  python=await loadPyodide({indexURL:new URL('./runtime/',self.location.href).href});
+  const config=await (await fetch('./runtime-config.json')).json();
+  const indexURL=new URL(config.index_url,self.location.href).href;
+  const {loadPyodide}=await import(indexURL+'pyodide.mjs');
+  python=await loadPyodide({indexURL});
   progress('Loading NumPy, SciPy and the HiGHS mathematical solver…');
-  await python.loadPackage('scipy',{messageCallback:progress});
+  await python.loadPackage('scipy',{messageCallback:progress,checkIntegrity:true});
   const manifest=await (await fetch('./python/manifest.json')).json();
   python.FS.mkdirTree('/home/pyodide/freshroute');
   for(const name of manifest){
