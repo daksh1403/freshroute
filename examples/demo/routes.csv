@@ -1,0 +1,5 @@
+route_id,destination_id,resource_id,travel_hours,capacity,cost_per_unit,fixed_cost
+R-KOY,Koyambedu,local-van,1,280,2,30
+R-TAM,Tambaram,local-van,3,250,3,30
+R-CHG,Chengalpattu,regional-truck,9,400,5,60
+R-EXP,Chengalpattu,express-van,4,90,8,120

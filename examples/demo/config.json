@@ -1,0 +1,8 @@
+{
+  "label": "Synthetic demonstration — Chennai produce dispatch",
+  "horizon_hours": 24,
+  "quantity_unit": "kg",
+  "currency": "INR",
+  "handling_hours": 1,
+  "integer_quantities": false
+}
