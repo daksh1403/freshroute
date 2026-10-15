@@ -3,6 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {"build": "python3 scripts/build_web.py", "deploy": "python3 scripts/build_web.py --cdn-runtime && wrangler pages deploy dist --project-name freshroute"},
-  "devDependencies": {"pyodide": "314.0.7"}
+  "scripts": {
+    "build": "python3 scripts/build_web.py",
+    "deploy": "python3 scripts/build_web.py --worker-runtime && wrangler deploy",
+    "test:ai": "node --test tests/test_ai*.mjs"
+  },
+  "devDependencies": {
+    "pyodide": "314.0.7",
+    "wrangler": "^4.126.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.30.0"
+  }
 }

@@ -22,6 +22,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npm run test:ai
       - run: npm run build
       - run: node scripts/test_wasm.mjs
       - uses: actions/upload-artifact@v4

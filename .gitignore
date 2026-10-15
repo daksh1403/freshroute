@@ -8,3 +8,9 @@ node_modules/
 dist/
 .wrangler/
 .web-cache/
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!.dev.vars.example
+.worker-build/

@@ -17,7 +17,7 @@ async function initialize(){
     if(!response.ok)throw new Error('Cannot load Python source: '+name);
     python.FS.writeFile('/home/pyodide/'+name,await response.text());
   }
-  await python.runPythonAsync('from freshroute.webbridge import run, preview, disrupt, workbook');
+  await python.runPythonAsync('from freshroute.webbridge import run, preview, disrupt, workbook, ai_review, ai_apply, ai_facts, ai_whatif');
   self.postMessage({type:'ready',version:python.version});
 }
 async function handle({id,method,args}){
@@ -32,7 +32,7 @@ async function handle({id,method,args}){
       finally{value.destroy();python.globals.delete('xlsx_data');}
       return;
     }
-    if(!['run','preview','disrupt'].includes(method))throw new Error('Unknown operation');
+    if(!['run','preview','disrupt','ai_review','ai_apply','ai_facts','ai_whatif'].includes(method))throw new Error('Unknown operation');
     args.forEach((arg,index)=>python.globals.set('arg_'+index,arg));
     try{
       const result=await python.runPythonAsync(`${method}(${args.map((_,i)=>'arg_'+i).join(',')})`);
