@@ -58,3 +58,28 @@ def workbook(raw_bytes: bytes) -> str:
         else: tables[sheet.title]=records
     book.close()
     return json.dumps(normalize(tables).to_dict(),allow_nan=False)
+
+
+def ai_review(raw:str,proposal:str)->str:
+    from freshroute.intelligence import review_extraction
+    return json.dumps(review_extraction(normalize(json.loads(raw)),json.loads(proposal)),allow_nan=False)
+
+
+def ai_apply(raw:str,draft:str,confirmed:bool,mode:str)->str:
+    from freshroute.intelligence import apply_extraction
+    return json.dumps(apply_extraction(normalize(json.loads(raw)),json.loads(draft),confirmed,mode).to_dict(),allow_nan=False)
+
+
+def ai_facts(raw_report:str)->str:
+    from freshroute.intelligence import evidence
+    return json.dumps(evidence(json.loads(raw_report)),allow_nan=False)
+
+
+def ai_whatif(raw_report:str,operations:str,confirmed:bool,time_limit:float=15)->str:
+    from freshroute.intelligence import apply_operations
+    previous=json.loads(raw_report);s=normalize(previous['scenario']);p=previous['optimized_plan']
+    old=Plan([Shipment(**x) for x in p.pop('shipments')],**p)
+    updated=apply_operations(s,json.loads(operations),confirmed)
+    changes=replan(s,old,updated,time_limit);plan=changes.pop('plan')
+    result=_result(updated,baseline(updated),plan);result['replanning']=changes
+    return json.dumps(result,allow_nan=False)

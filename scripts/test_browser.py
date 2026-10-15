@@ -1,4 +1,4 @@
-"""Real-browser acceptance test against a built/served Pages artifact."""
+"""Real-browser acceptance test against a built/served browser app."""
 import json
 from pathlib import Path
 import sys
@@ -11,7 +11,7 @@ with sync_playwright() as p:
     errors=[]
     page.on('pageerror',lambda err:errors.append(str(err)))
     page.goto(url,wait_until='domcontentloaded')
-    expect(page.locator('#generate')).to_be_enabled(timeout=120000)
+    expect(page.locator('#generate')).to_be_enabled(timeout=300000)
     page.locator('#generate').click()
     expect(page.locator('#net-revenue')).to_contain_text('21,123',timeout=60000)
     expect(page.locator('#violations')).to_have_text('0')

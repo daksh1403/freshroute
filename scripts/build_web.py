@@ -1,4 +1,4 @@
-"""Build a self-contained Pages artifact: pinned Pyodide plus hashed local wheels."""
+"""Build browser assets with pinned Pyodide and verified wheels."""
 import csv
 import sys
 import hashlib
@@ -16,11 +16,12 @@ CACHE=ROOT/'.web-cache'
 RUNTIME=ROOT/'node_modules/pyodide'
 VERSION=json.loads((RUNTIME/'package.json').read_text())['version']
 LOCK=json.loads((RUNTIME/'pyodide-lock.json').read_text())
-CDN='--cdn-runtime' in sys.argv
+WORKER='--worker-runtime' in sys.argv
+CDN='--cdn-runtime' in sys.argv or WORKER
 DIST.mkdir(exist_ok=True); CACHE.mkdir(exist_ok=True)
 shutil.copytree(ROOT/'web',DIST,dirs_exist_ok=True)
 if (DIST/'runtime').exists(): shutil.rmtree(DIST/'runtime')
-(DIST/'runtime-config.json').write_text(json.dumps({'index_url': f'https://cdn.jsdelivr.net/pyodide/v{VERSION}/full/' if CDN else './runtime/'}))
+(DIST/'runtime-config.json').write_text(json.dumps({'index_url': f'https://cdn.jsdelivr.net/pyodide/v{VERSION}/full/' if CDN and not WORKER else './runtime/'}))
 if not CDN:
     (DIST/'runtime').mkdir(exist_ok=True)
     for name in ['pyodide.mjs','pyodide.js','pyodide.asm.mjs','pyodide.asm.wasm','python_stdlib.zip','pyodide-lock.json']:
@@ -40,9 +41,9 @@ if not CDN:
                     if attempt==2: raise
                     time.sleep(1)
         print(f'{name}: {path.stat().st_size/1e6:.1f} MB, SHA256 verified',flush=True)
-        if path.stat().st_size>25*1024*1024: raise ValueError('Package exceeds Pages per-asset limit')
+        if path.stat().st_size>25*1024*1024: raise ValueError('Package exceeds the static asset size limit')
         shutil.copy2(path,DIST/'runtime'/path.name)
-modules=['__init__','model','adapters','engine','evaluation','insights','scenario','webbridge']
+modules=['__init__','model','adapters','engine','evaluation','insights','scenario','webbridge','intelligence']
 (DIST/'python/freshroute').mkdir(parents=True,exist_ok=True)
 for module in modules: shutil.copy2(ROOT/'freshroute'/f'{module}.py',DIST/'python/freshroute'/f'{module}.py')
 (DIST/'python/manifest.json').write_text(json.dumps([f'freshroute/{name}.py' for name in modules]))
@@ -57,4 +58,4 @@ with zipfile.ZipFile(DIST/'xlsx-support.zip','w',zipfile.ZIP_DEFLATED) as bundle
         for path in source.rglob('*'):
             if path.is_file() and '__pycache__' not in path.parts:
                 bundle.write(path,Path(name)/path.relative_to(source))
-print(f'Pages artifact ready at {DIST}',flush=True)
+print(f'Browser assets ready at {DIST}',flush=True)

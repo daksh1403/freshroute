@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 let worker,ready=false,busy=false,scenario=null,result=null,disrupted=null,version='',requestId=0;
 const waiting=new Map();
-const labels={overview:'Overview',plan:'Dispatch plan',inventory:'Inventory & inputs',evidence:'Decision evidence',disruptions:'Disruption sandbox',reports:'Reports'};
+const labels={'ai-import':'AI inventory import','ai-ask':'Ask FreshRoute','ai-whatif':'AI what-if',overview:'Overview',plan:'Dispatch plan',inventory:'Inventory & inputs',evidence:'Decision evidence',disruptions:'Disruption sandbox',reports:'Reports'};
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=(value,digits=1)=>Number.isFinite(Number(value))?Number(value).toLocaleString(undefined,{maximumFractionDigits:digits}):'—';
 const money=value=>number(value,2);
@@ -135,3 +135,6 @@ function csv(rows){if(!rows?.length)return '';const keys=Object.keys(rows[0]);co
 document.querySelectorAll('.download').forEach(button=>button.onclick=()=>{if(!result)return;const kind=button.dataset.kind;if(kind==='report')download('freshroute-report.json',JSON.stringify(result,null,2),'application/json');if(kind==='shipments')download('freshroute-shipments.csv',csv(result.shipments),'text/csv');if(kind==='comparison')download('freshroute-comparison.csv',csv(Object.entries(result.comparison).map(([metric,values])=>({metric,...values}))),'text/csv');});
 $('download-scenario').onclick=()=>{if(scenario)download('freshroute-scenario.json',JSON.stringify(scenario,null,2),'application/json');};
 launchEngine();demo().catch(err=>error(err.message));
+
+// Narrow integration surface for the separate intelligence UI.
+window.FreshRoute={getScenario:()=>scenario,getResult:()=>result,isReady:()=>ready,call,useScenario:validateScenario,showTab,table,escape,number,runCurrent:async()=>{setBusy(true);try{result=await call('run',JSON.stringify(scenario),currentLimit());renderResult();showTab('overview');return result;}finally{setBusy(false);}}};

@@ -1,120 +1,114 @@
-# FreshRoute
+# FreshRoute AI 🌱
 
-[Open the live Cloudflare app](https://freshroute.pages.dev/)
+[Live app on Cloudflare Workers](https://freshroute.dakshx.workers.dev/) · [Public source](https://github.com/daksh1403/freshroute)
 
-Local, explainable allocation of perishable produce. Core solving does not require a network or dashboard. No organizer data or official score was supplied: the example and benchmark are **synthetic validation scenarios**, not predictive or real-world performance evidence.
+### A stock-note photo should be enough to start planning a delivery.
 
-## Run
+We built FreshRoute for **PS 07 at Bugged Out! — IEEE RAS VIT Chennai**. The problem sounded simple: send fresh produce to the right markets before it spoils. But the earliest-expiring batch is not always the best batch for every destination. Demand, prices, travel time and shared vehicle capacity all compete.
 
-Python 3.11 or newer:
+Our first version solved that allocation problem. For the next version, we asked a more practical question: **what if the stock is written in a notebook instead of a clean spreadsheet?**
+
+That became **FreshRoute Intelligence**, powered by **Gemma 4**.
+
+## What we made
+
+- **Read a stock note or image.** Gemma extracts candidate inventory, demand and market-price records with the source words attached. Missing information stays missing.
+- **Check it before using it.** The operator sees the original source, uncertain fields and editable records. Nothing enters the scenario until they confirm it.
+- **Calculate the actual dispatch.** Our Python optimizer chooses quantities and destinations, checks shelf life and capacity, and compares the result with a feasible FEFO baseline.
+- **Ask why.** Gemma explains a bounded set of independently recomputed solver facts. The operator can open the exact evidence behind each citation.
+- **Try a disruption in plain English.** Gemma can propose supported changes such as a three-hour delay on a named route. The operator reviews the change; the optimizer does the recalculation.
+
+This is not a chatbot making delivery guesses. **Gemma reads and interprets; the mathematical engine calculates.**
+
+## Why Gemma 4?
+
+A solver cannot read a handwritten note or understand an informal supplier message. We use `gemma-4-26b-a4b-it` through the official Google GenAI JavaScript SDK and Gemini API to turn that information into a proposal a person can verify.
+
+We do not swap in a Gemini model and call it Gemma. The app displays the requested model, returned model version and measured request latency. Since schema-constrained output support has not been verified for this model, we request JSON and validate it strictly in our own code.
+
+```mermaid
+flowchart LR
+  A[Note or image] --> B[Gemma 4 on Gemini API]
+  B --> C[Candidate records + source references]
+  C --> D[Human review and corrections]
+  D --> E[Python validation]
+  E --> F[SciPy / HiGHS optimizer]
+  F --> G[FEFO comparison + constraint checks]
+  G --> H[Evidence-grounded Gemma explanation]
+```
+
+## Why Cloudflare Workers?
+
+Workers serves the app and runs the small API layer that calls Google. The Gemini key stays in a Worker secret, never in the browser bundle. The larger Python/SciPy optimization engine runs in a browser worker through Pyodide, so the deployment does not need a paid Python container.
+
+Core plans stay in the browser. AI requests send only the selected source or the displayed evidence to Google. The first hosted browser load fetches pinned Pyodide assets through the Worker’s cache; once loaded, the optimizer does not need the AI service.
+
+## Try it locally
+
+Use Python 3.11+ and Node 22+.
 
 ```sh
+git clone https://github.com/daksh1403/freshroute.git
+cd freshroute
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[test]'
-streamlit run app.py
-```
-
-```sh
-python -m pytest -q
-python -m freshroute solve examples/demo --output reports/demo
-python -m freshroute benchmark --output reports/benchmark
-python -m freshroute solve /path/to/scenario.json --output reports/imported
-python -m freshroute solve /path/to/scenario.xlsx --output reports/imported
-```
-
-The dashboard opens at http://localhost:8501. JSON imports, CSV-table directories, and Excel workbooks use the same validation and optimization engine. Exported reports include the normalized input, baseline and optimized shipments, independently recomputed metrics, rejection reasons, markdown scenarios, and solver metadata. Dependencies are declared in `pyproject.toml`; `requirements-lock.txt` records the exact native environment used for verification. GitHub Actions repeats tests and benchmarks in a fresh Linux environment.
-
-## Input contract
-
-A JSON object contains `config`, `inventory`, `demand`, `routes`, and `resources`. A CSV directory contains `config.json` plus `inventory.csv`, `demand.csv`, `routes.csv`, and `resources.csv`. An Excel workbook contains those five sheet names; `config` is a single row. Empty JSON arrays are accepted. Empty CSV tables must retain headers. Workbook uploads and JSON uploads are supported in the app.
-
-All quantities and capacities use one common `quantity_unit`; all money uses one `currency`. Time is in **hours**. No implicit conversion between kg, crates, days, or currencies occurs.
-
-| Table | Required fields | Optional fields (default) |
-|---|---|---|
-| config | horizon_hours (>0), quantity_unit, currency | handling_hours (0), integer_quantities (false), as_of (for timestamps), label |
-| inventory | batch_id, commodity, quantity, shelf_life_hours | handling_cost_per_unit (0), disposal_cost_per_unit (0), storage_cost_per_unit (0) |
-| demand | destination_id, commodity, quantity, price_per_unit | min_arrival_life_hours (0) |
-| routes | route_id, destination_id, resource_id, travel_hours, capacity, cost_per_unit | fixed_cost (0), commodity (empty = all) |
-| resources | resource_id, capacity | |
-
-Unique batch, route and resource IDs are required; `(destination_id, commodity)` must be unique in demand. Destination names are IDs; separate destination tables are unnecessary. Route destinations must occur in demand; route resources must exist. Missing critical fields, nonfinite/negative numbers, duplicate records, ambiguous aliases and unknown columns are rejected with a record/field message. Commodity labels are stripped and case-normalized; IDs remain case-sensitive. Additional columns can be explicitly mapped through the Python API or `--column-map mapping.json` (source-column to canonical-column, by table). Common aliases such as `qty`, `batch`, `destination`, `vehicle_id`, `remaining_shelf_life_hours`, and `unit_price` are accepted. Units are never guessed from values.
-
-Inventory may supply timezone-aware `expires_at` instead of shelf life when `config.as_of` is timezone-aware. Expired timestamps normalize to zero remaining life. Conflicting expiry and remaining-life fields are rejected. Demand is **commodity/destination aggregate within this horizon**. Time-dependent demand must be aggregated deliberately before import; timestamps or extra demand columns are rejected rather than silently discarded. Optional costs absent from data are disclosed zero-cost assumptions, not imputed estimates.
-
-## Model and assumptions
-
-One planning decision at time zero; divisible quantities by default (or integral quantity units when requested). A route represents a single direct delivery service to one destination. `route.capacity` limits that service; `resource.capacity` is the total quantity budget shared by all routes on that resource over this planning wave. It does **not** simulate trip sequencing, return trips, vehicle packing, warehouse locations or a vehicle-routing problem. Define resource capacity accordingly. `fixed_cost` is charged once per activated route, independent of the number of batches loaded. Per-vehicle costs shared across multiple destinations need a different activation model and must not be entered as route costs.
-
-Sales are assumed to occur immediately on arrival, up to documented demand. Travel plus handling must be strictly below shelf life, within the horizon, and leave at least the demand's minimum arrival shelf life. There is no stochastic deterioration or fabricated sell-through rate. Committed/dispatched state is not modeled: replan is an **unexecuted planning sandbox**; users must submit residual inventory, residual demand and available capacity for live operations.
-
-For each feasible batch/route arc, choose nonnegative shipment `x[b,r]`. Constrain batch sums by stock, destination/commodity sums by demand, route sums by route capacity and resource sums by shared capacity. With fixed costs, add binary `y[r]` and `sum_b x[b,r] <= route.capacity * y[r]`.
-
-Maximize net revenue:
-
-```
-sales - variable transport - activated route fixed costs - shipment handling
-      - disposal of unshipped stock expiring by horizon
-      - storage of unshipped stock surviving the horizon
-```
-
-Spoilage is deterministic under this disclosed horizon model. Unsold = all unshipped inventory, including both spoilage and viable remaining stock. `storage_cost_per_unit` is a cost for the whole horizon, not per hour. Purchase costs are sunk and excluded. Saved disposal/storage costs enter shipment objective coefficients; their initial-inventory constant is included in reported net revenue.
-
-The sparse model uses SciPy/HiGHS MILP (continuous shipment variables unless configured integral; binary activation only where fixed cost is positive). See [SciPy solver documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html). A second solve preserves the primary economic objective with an economic objective floor at the primary optimum (acceptance tolerance 1e-9 currency units) and prefers expiring stock and stable sorted arc order. Inputs are sorted for reproducibility. This is a deterministic secondary preference, not a claim that every degenerate LP has a unique solution. Primary status, incumbent gap when supplied, runtime and tie-break status are reported; heuristic results are never called optimal. Each solve has a time limit; the secondary solve uses only the remaining budget. Candidate construction and baseline computation are outside solver time limits.
-
-An empty shipment plan is always feasible because unmet demand is allowed. Mandatory minimum delivery obligations are unsupported. Solver failures or invalid incumbents trigger a validated fallback choosing the better economic result of FEFO, margin greedy, and no shipment. Independent evaluation checks every returned plan. Optimal results are checked against baseline and the empty plan; a material regression downgrades to fallback and exposes the issue.
-
-## Baseline, evidence and discounts
-
-The practical baseline processes batches FEFO, then sends each to its best currently feasible net contribution destination; fixed-route activation costs are considered for the quantity that fits. It stops economically harmful allocations, uses the same candidates and capacities, and never exceeds demand. It is a credible greedy strategy, but it does not coordinate scarce routes across future batches. All reported metrics use the same independent evaluator for both plans. Percentage change is null when the baseline is zero. Improvement in net revenue can trade off spoilage or service: the dashboard reports all metrics without hiding regressions.
-
-Markdowns are scenario suggestions only. For unsold stock expiring within the horizon, evaluate 5%, 10%, and 15% against feasible route unit margins and allocated activation costs. Recommend the largest tested markdown with nonnegative incremental contribution; show a break-even demand-uplift ratio. Without elasticity evidence, additional sales are explicitly zero in the evaluated plan. If no economically viable route exists, report that a markdown cannot fix the logistics or margin issue. Benchmarks include zero/empty demand, excess supply, scarce capacity, high risk, delays, uneven demand and uneconomic markdown cases.
-
-## Reproducible judge walkthrough
-
-1. Launch the dashboard with the labeled synthetic example. Inspect inventory, prices, hours and capacity.
-2. Generate the plan. Compare FEFO and optimized net revenue, fulfillment and spoilage using the displayed evaluator output.
-3. Open the dispatch table and explanations; inspect route rejections and binding constraints.
-4. In the disruption sandbox add travel delay and reduce capacity. Replan and inspect whether the previous plan is still feasible, the shipment deltas, and new metrics.
-5. Download the structured report and CSVs. Run `python -m pytest -q` and the benchmark command to demonstrate independent constraint checks and tiny-case optimality verification.
-
-## Boundaries
-
-No official score adapter exists because none was supplied. The economic objective is replaceable in the engine, and metrics are separate. No demand forecasting, fitted elasticity, sensor accuracy, real-world validation, multi-period commitments or robust optimization is claimed. Large instances remain constrained by candidate count and available memory; use measured benchmark runtime on the actual target hardware. All UI values come from the current input and evaluated plans.
-
-## Free Cloudflare deployment
-
-The hosted interface runs the **same Python model and HiGHS solver in a browser worker**, using pinned Pyodide 314.0.7. This avoids the paid Cloudflare Containers requirement. The hosted build loads the pinned Pyodide runtime, NumPy and SciPy from the Pyodide CDN; wheel integrity is checked by the loader. The optimizer source and interface are served from Cloudflare Pages. The default local build bundles runtime assets too. Input data never leaves the browser. JSON, CSV table bundles and XLSX imports are supported, alongside baseline comparison, explanations, markdown scenarios, disruptions and real report downloads. The local Streamlit app remains available.
-
-The initial download is about 30 MB. Modern browsers with WebAssembly support are required; memory and solving speed depend on the client device. Closing or reloading the page discards the planning session. There is no persistent operational execution state. Computation after initialization does not call an external service.
-
-Build and serve locally (Node 22+ and the Python environment above):
-
-```sh
 npm ci
-npm run build
-python -m http.server 8788 --directory dist
-# Open http://localhost:8788
-node scripts/test_wasm.mjs
+cp .dev.vars.example .dev.vars
+# Put your own GEMINI_API_KEY in .dev.vars. Do not commit it.
+python scripts/build_web.py
+npx wrangler dev
 ```
 
-The build downloads the exact NumPy/SciPy wheels from the Pyodide CDN, verifies their SHA-256 values from the pinned runtime lockfile, and caches them in `.web-cache`. Build dependencies require a network; core solving does not. Runtime assets are generated into `dist/`, not committed. `python scripts/build_web.py --cdn-runtime` builds the smaller hosted variant; `npm run deploy` selects this mode. CDN access is required for initial hosted engine startup, but user inputs are never sent there. Spreadsheet support bundles the installed pure Python openpyxl/et_xmlfile modules.
-
-With Cloudflare Wrangler installed and authenticated:
+Open the URL printed by Wrangler. For the original local dashboard, run `streamlit run app.py`. The solver also works without either interface:
 
 ```sh
-wrangler pages project create freshroute --production-branch main
+python -m freshroute solve examples/demo --output reports/demo
+python -m freshroute solve path/to/scenario.json --output reports/imported
+python -m pytest -q
+npm run test:ai
+python -m freshroute benchmark --output reports/benchmark
+```
+
+CSV table directories and Excel workbooks work too. [Technical notes and input format](docs/TECHNICAL.md) cover columns, units, assumptions and the exact model.
+
+## The demo we want judges to try
+
+1. Open **AI inventory import** and choose the labeled example note or an image in `examples/ai`.
+2. Run the real Gemma extraction. Check quantities, units, shelf life and source references.
+3. Choose append or replace, correct anything uncertain, and confirm the records.
+4. Open the resulting plan and compare real net revenue, spoilage and demand fulfillment with FEFO.
+5. In **AI what-if**, ask: “What if route R-CHG is delayed by three hours?” Review and confirm the proposed operation.
+6. Inspect the updated allocation, then ask Gemma to explain the verified evidence.
+
+No API key? The original optimization dashboard still works. The AI screens show the service as unavailable rather than pretending to infer anything.
+
+## What we have actually measured
+
+The original synthetic optimization benchmark has **23 scenarios**, with zero constraint violations and no revenue regressions against FEFO in our recorded runs. Tiny cases are also checked against brute-force enumeration.
+
+On the included synthetic dispatch dataset, FEFO earns **₹19,811** and the economic optimum earns **₹21,123**. There is a trade-off: modeled spoilage rises from **0 to 110 kg** under the supplied disposal penalties. We show this instead of claiming every metric improves.
+
+A real Gemma 4 account/model check succeeded with the exact requested model; that initial request took **1.49 seconds**. This is one observed request, not a latency guarantee. Live extraction evaluation is separate from unit tests; see the measured results and status in [the AI evaluation notes](docs/AI_EVALUATION.md).
+
+All example inputs are synthetic. The handwriting-style image uses a font; it is not evidence of accuracy on actual human handwriting. We have not measured real-world prediction accuracy or an official competition score.
+
+## A few limits we are honest about
+
+- A person must check AI output. Source citations and numeric checks reduce errors; they do not prove that an image was read correctly.
+- Unknown box weights, unreadable quantities and unclear shelf life require manual correction. Supplier buying prices are not silently treated as market selling prices.
+- We plan one unexecuted dispatch wave. We do not model trip sequencing, committed shipments, forecasting or live warehouse state.
+- Markdown suggestions are scenarios. We do not assume a discount creates more customers.
+- Gemma API access, quotas and the initial runtime download depend on external services. The standalone optimizer does not.
+
+## Build and deploy
+
+```sh
 npm run deploy
+# Set the server-side secret for the deployed Worker:
+npx wrangler secret put GEMINI_API_KEY
 ```
 
-The existing project only needs the second command. No paid service is required. Deployment is an explicit local action; GitHub CI verifies the application but does not hold Cloudflare credentials.
+The source is public at [github.com/daksh1403/freshroute](https://github.com/daksh1403/freshroute). Original FreshRoute code is [MIT licensed](LICENSE). Gemma, the API and bundled libraries keep their own licenses and terms. We are using Gemma, not claiming that we trained it or built a new model harness.
 
-For actual Chrome acceptance checks, install Playwright separately, ensure Chrome is installed, start the static server above, and run:
-
-```sh
-python -m pip install playwright
-python scripts/test_browser.py http://localhost:8788
-```
-
-This checks the real WebAssembly optimizer, disruption feasibility, JSON report download, XLSX import and mobile overflow. Screenshots go to the system temporary directory.
+Contributions are welcome; start with [CONTRIBUTING.md](CONTRIBUTING.md).
