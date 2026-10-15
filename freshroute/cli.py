@@ -21,8 +21,10 @@ def main():
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,format='%(levelname)s %(name)s: %(message)s')
     try:
         if args.command == 'solve':
-            with open(args.column_map) if args.column_map else open(__file__) as f:
-                mapping = json.load(f) if args.column_map else None
+            mapping = None
+            if args.column_map:
+                with open(args.column_map) as stream:
+                    mapping = json.load(stream)
             s = load_scenario(args.input,column_map=mapping)
             b,p = baseline(s),optimize(s,args.time_limit)
             save_report(s,b,p,args.output)
