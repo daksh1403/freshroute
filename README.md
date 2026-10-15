@@ -21,7 +21,7 @@ python -m freshroute solve /path/to/scenario.json --output reports/imported
 python -m freshroute solve /path/to/scenario.xlsx --output reports/imported
 ```
 
-The dashboard opens at http://localhost:8501. JSON imports, CSV-table directories, and Excel workbooks use the same validation and optimization engine. Exported reports include the normalized input, baseline and optimized shipments, independently recomputed metrics, rejection reasons, markdown scenarios, and solver metadata. Dependencies are declared in `pyproject.toml`; `requirements-lock.txt` records the environment used for final verification.
+The dashboard opens at http://localhost:8501. JSON imports, CSV-table directories, and Excel workbooks use the same validation and optimization engine. Exported reports include the normalized input, baseline and optimized shipments, independently recomputed metrics, rejection reasons, markdown scenarios, and solver metadata. Dependencies are declared in `pyproject.toml`; `requirements-lock.txt` records the exact native environment used for verification. GitHub Actions repeats tests and benchmarks in a fresh Linux environment.
 
 ## Input contract
 
@@ -59,7 +59,7 @@ sales - variable transport - activated route fixed costs - shipment handling
 
 Spoilage is deterministic under this disclosed horizon model. Unsold = all unshipped inventory, including both spoilage and viable remaining stock. `storage_cost_per_unit` is a cost for the whole horizon, not per hour. Purchase costs are sunk and excluded. Saved disposal/storage costs enter shipment objective coefficients; their initial-inventory constant is included in reported net revenue.
 
-The sparse model uses SciPy/HiGHS MILP (continuous shipment variables unless configured integral; binary activation only where fixed cost is positive). See [SciPy solver documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html). A second solve preserves the primary economic objective within an absolute 1e-7 currency-unit tolerance and prefers expiring stock and stable sorted arc order. Inputs are sorted for reproducibility. This is a deterministic secondary preference, not a claim that every degenerate LP has a unique solution. Primary status, incumbent gap when supplied, runtime and tie-break status are reported; heuristic results are never called optimal. Each solve has a time limit; the secondary solve uses only the remaining budget. Candidate construction and baseline computation are outside solver time limits.
+The sparse model uses SciPy/HiGHS MILP (continuous shipment variables unless configured integral; binary activation only where fixed cost is positive). See [SciPy solver documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html). A second solve preserves the primary economic objective with an economic objective floor at the primary optimum (acceptance tolerance 1e-9 currency units) and prefers expiring stock and stable sorted arc order. Inputs are sorted for reproducibility. This is a deterministic secondary preference, not a claim that every degenerate LP has a unique solution. Primary status, incumbent gap when supplied, runtime and tie-break status are reported; heuristic results are never called optimal. Each solve has a time limit; the secondary solve uses only the remaining budget. Candidate construction and baseline computation are outside solver time limits.
 
 An empty shipment plan is always feasible because unmet demand is allowed. Mandatory minimum delivery obligations are unsupported. Solver failures or invalid incumbents trigger a validated fallback choosing the better economic result of FEFO, margin greedy, and no shipment. Independent evaluation checks every returned plan. Optimal results are checked against baseline and the empty plan; a material regression downgrades to fallback and exposes the issue.
 
@@ -80,3 +80,39 @@ Markdowns are scenario suggestions only. For unsold stock expiring within the ho
 ## Boundaries
 
 No official score adapter exists because none was supplied. The economic objective is replaceable in the engine, and metrics are separate. No demand forecasting, fitted elasticity, sensor accuracy, real-world validation, multi-period commitments or robust optimization is claimed. Large instances remain constrained by candidate count and available memory; use measured benchmark runtime on the actual target hardware. All UI values come from the current input and evaluated plans.
+
+## Free Cloudflare deployment
+
+The hosted interface runs the **same Python model and HiGHS solver in a browser worker**, using pinned Pyodide 314.0.7. This avoids the paid Cloudflare Containers requirement. Python, NumPy and SciPy assets are served from the same Pages site. Input data never leaves the browser. JSON, CSV table bundles and XLSX imports are supported, alongside baseline comparison, explanations, markdown scenarios, disruptions and real report downloads. The local Streamlit app remains available.
+
+The initial download is about 30 MB. Modern browsers with WebAssembly support are required; memory and solving speed depend on the client device. Closing or reloading the page discards the planning session. There is no persistent operational execution state. Computation after initialization does not call an external service.
+
+Build and serve locally (Node 22+ and the Python environment above):
+
+```sh
+npm ci
+npm run build
+python -m http.server 8788 --directory dist
+# Open http://localhost:8788
+node scripts/test_wasm.mjs
+```
+
+The build downloads the exact NumPy/SciPy wheels from the Pyodide CDN, verifies their SHA-256 values from the pinned runtime lockfile, and caches them in `.web-cache`. Build dependencies require a network; core solving does not. Runtime assets are generated into `dist/`, not committed. Spreadsheet support bundles the installed pure Python openpyxl/et_xmlfile modules.
+
+With Cloudflare Wrangler installed and authenticated:
+
+```sh
+wrangler pages project create freshroute --production-branch main
+npm run deploy
+```
+
+The existing project only needs the second command. No paid service is required. Deployment is an explicit local action; GitHub CI verifies the application but does not hold Cloudflare credentials.
+
+For actual Chrome acceptance checks, install Playwright separately, ensure Chrome is installed, start the static server above, and run:
+
+```sh
+python -m pip install playwright
+python scripts/test_browser.py http://localhost:8788
+```
+
+This checks the real WebAssembly optimizer, disruption feasibility, JSON report download, XLSX import and mobile overflow. Screenshots go to the system temporary directory.
