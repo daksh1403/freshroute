@@ -20,6 +20,7 @@
 <button class="nav" data-tab="evidence"><span>◎</span>Decision evidence</button>
 <button class="nav" data-tab="disruptions"><span>⤨</span>Disruption sandbox</button>
 <button class="nav" data-tab="reports"><span>↓</span>Reports</button>
+<button class="nav" data-tab="about"><span>?</span>About & how to use</button>
 </nav>
 <div class="sidebar-bottom"><span class="local-dot"></span> Core plans stay in your browser<p>AI sends only submitted inputs<br>to Google through our Worker.</p><a href="https://github.com/daksh1403/freshroute" target="_blank" rel="noopener">Source & documentation ↗</a></div>
 </aside>
@@ -51,6 +52,29 @@
 </section>
 <section id="ai-ask" class="tab-panel"><div class="section-title"><h2>Ask about a plan you can verify.</h2><p>Generate an optimized plan first. Only the bounded, independently recomputed evidence shown below is sent with your question.</p></div><div class="card ai-card"><label for="ai-question">Question about current inputs or solver results</label><textarea id="ai-question" rows="3">Why did net revenue improve, and what happened to spoilage?</textarea><button class="primary" id="ai-ask-button">Ask Gemma about this plan ↗</button><p id="ai-ask-progress" role="status"></p><div id="ai-answer"></div><details><summary>Inspect exactly which evidence was sent</summary><pre id="ai-evidence"></pre></details></div></section>
 <section id="ai-whatif" class="tab-panel"><div class="section-title"><h2>Describe the disruption. Review the change.</h2><p>Gemma proposes whitelisted changes; you confirm them; the same optimizer calculates the updated allocation.</p></div><div class="card ai-card"><label for="ai-whatif-question">What would you like to test?</label><textarea id="ai-whatif-question" rows="3">What if route R-CHG is delayed by three hours?</textarea><button class="primary" id="ai-whatif-propose">Interpret with Gemma 4 ↗</button><p id="ai-whatif-progress" role="status"></p><div id="ai-whatif-proposal" hidden><div class="notice" id="ai-whatif-clarifications"></div><label for="ai-operations">Proposed operations (editable; no code is executed)</label><textarea id="ai-operations" rows="9" spellcheck="false"></textarea><label class="check-label"><input id="ai-whatif-confirm" type="checkbox">I reviewed the targets and values, resolved ambiguities, and confirm this unexecuted scenario.</label><button class="primary" id="ai-whatif-run">Confirm & calculate updated plan ↗</button></div><div id="ai-whatif-results"></div></div></section>
+<section id="about" class="tab-panel" aria-labelledby="about-title">
+<div class="section-title"><h2 id="about-title">FreshRoute, made simple.</h2><p>A short guide to getting your first delivery plan.</p></div>
+<div class="card ai-card"><h3>What is FreshRoute?</h3><p>FreshRoute helps you decide which produce to send, where to send it, and how much to send. It looks at your stock, how long it will stay fresh, what each market needs, selling prices, travel time and vehicle space.</p><p>Gemma 4 helps read stock notes and photos. The planning engine uses the checked numbers to calculate the delivery plan. You review the result before using it.</p></div>
+<div class="card ai-card"><h3>Try it in three easy steps</h3><ol>
+<li><p><strong>Wait for the engine to load.</strong> The website starts with example stock and markets, so you can try it without uploading anything.</p></li>
+<li><p><strong>Click “Generate optimized plan”.</strong> You will find this green button at the top of the page.</p></li>
+<li><p><strong>Read your results.</strong> Overview shows the money left after costs, orders covered and stock expected to spoil. Open Dispatch plan to see which batch goes to which market.</p></li>
+</ol><button class="primary jump" data-target="overview">Start with the example ↗</button></div>
+<div class="report-grid">
+<article class="card"><h3>Use your own stock</h3><p>Open AI inventory import. Type a stock note or choose a clear photo. Include the produce name, quantity, unit and remaining freshness time, such as “Tomatoes, 120 kg, 2 days remaining”. Agree to send the selected input to Google, then click “Extract with Gemma 4”.</p><button class="secondary jump" data-target="ai-import">Open AI inventory import ↗</button></article>
+<article class="card"><h3>Check, confirm, plan</h3><p>Check the extracted records against your note. Correct missing or wrong numbers in the editable records. Choose “Append” to add stock or “Replace” to use only the new stock. Check the confirmation box, then click “Confirm records & optimize”. Your current markets and routes are still used, so check those too.</p><button class="secondary jump" data-target="inventory">Check inventory & inputs ↗</button></article>
+<article class="card"><h3>Understand the plan</h3><p>Dispatch plan lists the batch, market and quantity for each delivery. Decision evidence explains the choices. To ask in everyday language, open Ask FreshRoute after generating a plan and try “Why was this batch sent to that market?” Open the cited evidence to see the numbers behind the answer.</p><button class="secondary jump" data-target="plan">Open Dispatch plan ↗</button></article>
+</div>
+<div class="card ai-card"><h3>Try a change before making a delivery</h3><p>Open AI what-if and type a change, such as “What if route R-CHG is delayed by three hours?” Click “Interpret with Gemma 4”, check the proposed change, tick the confirmation box and click “Confirm & calculate updated plan”. The website calculates a new plan for you to compare.</p><p>You can also use Disruption sandbox to change travel time, capacity, demand, prices or available stock with simple fields.</p><button class="secondary jump" data-target="ai-whatif">Try an AI what-if ↗</button><button class="secondary jump" data-target="disruptions">Use the simple fields ↗</button></div>
+<div class="card ai-card"><h3>What do the result labels mean?</h3><dl>
+<dt><strong>Net revenue</strong></dt><dd><p>Sales money left after the costs included in your data.</p></dd>
+<dt><strong>Demand fulfilled</strong></dt><dd><p>How much of the markets’ requested quantity the plan supplies.</p></dd>
+<dt><strong>Spoilage by horizon</strong></dt><dd><p>Unsold stock whose freshness runs out within the time window you selected.</p></dd>
+<dt><strong>FEFO baseline</strong></dt><dd><p>A comparison plan that considers the earliest-expiring stock first.</p></dd>
+<dt><strong>Constraint violations</strong></dt><dd><p>Checks for broken rules, such as sending too much stock or exceeding vehicle space. A valid plan shows zero.</p></dd>
+</dl></div>
+<div class="card ai-card"><h3>Save your work or start again</h3><p>Open Reports to download the full result or a spreadsheet-friendly CSV of deliveries. “Download scenario JSON” saves the inputs so you can use them again. To load a complete dataset, use “Import data” near the top: choose one JSON file, one Excel workbook, or the full set of CSV tables with its configuration file. “Reset demo” brings back the example inputs.</p><button class="secondary jump" data-target="reports">Open Reports ↗</button><p>Need the file layout or more detail? Visit the <a href="https://github.com/daksh1403/freshroute/blob/main/docs/TECHNICAL.md" target="_blank" rel="noopener">input guide</a> or <a href="https://github.com/daksh1403/freshroute/blob/main/docs/WARNINGS.md" target="_blank" rel="noopener">operating notes</a>.</p></div>
+</section>
 <footer><span>FreshRoute / Intelligent produce distribution</span><span id="evaluation-status">Awaiting evaluation</span></footer>
 </main>
 </div>
