@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "freshroute"
+version = "1.0.0"
+description = "Explainable produce allocation with exact optimization and independent evaluation"
+requires-python = ">=3.11"
+dependencies = ["numpy>=2.2,<3", "pandas>=2.2,<4", "scipy>=1.15,<2", "streamlit>=1.45,<2", "plotly>=6,<7", "openpyxl>=3.1,<4"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[project.scripts]
+freshroute = "freshroute.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["freshroute*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
