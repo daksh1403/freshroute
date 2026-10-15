@@ -1,0 +1,6 @@
+batch_id,commodity,quantity,shelf_life_hours,handling_cost_per_unit,disposal_cost_per_unit,storage_cost_per_unit
+T-101,tomato,180,8,0.5,1,0
+T-102,tomato,220,48,0.5,1,0.2
+B-201,banana,150,18,0.5,0.8,0
+B-202,banana,100,60,0.5,0.8,0.1
+S-301,spinach,90,5,0.5,1.5,0

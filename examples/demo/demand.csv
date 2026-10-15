@@ -1,0 +1,10 @@
+destination_id,commodity,quantity,price_per_unit,min_arrival_life_hours
+Koyambedu,tomato,200,24,1
+Tambaram,tomato,180,34,2
+Chengalpattu,tomato,160,44,3
+Koyambedu,banana,100,36,1
+Tambaram,banana,120,43,2
+Chengalpattu,banana,100,49,3
+Koyambedu,spinach,50,30,0.5
+Tambaram,spinach,70,39,1
+Chengalpattu,spinach,50,47,1
